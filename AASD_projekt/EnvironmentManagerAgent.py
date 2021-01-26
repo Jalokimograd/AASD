@@ -45,7 +45,7 @@ class EnvironmentManagerAgent(agent.Agent):
                     yy = body["localization"]["y"] - agent_localization["y"]
                     distance = xx ** 2 + yy ** 2
                     print(f"distance: {distance}")
-                    if distance  < range ** 2:
+                    if distance < range ** 2:
                         msg = Message(
                             to = key,
                             metadata = dict(performative="broadcast"),
@@ -59,7 +59,13 @@ class EnvironmentManagerAgent(agent.Agent):
         async def run(self):
             print(f"[{self.agent.agent_name}] Actualize informations of environment Manager")
 
-              
+    def get_agent_points(self):
+        x = []
+        y = []
+        for agent in self.agents_list.values():
+            x.append(agent['localization']['x'])
+            y.append(agent['localization']['y'])
+        return x,y
                      
     async def setup(self):
         print("Environment Manager created")
