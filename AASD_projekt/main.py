@@ -9,7 +9,7 @@ from Map import Map
 import osmnx as ox
 import random
 
-PLACE_NAME = "Milanowek, Poland"
+PLACE_NAME = "Brwinow, Poland"
 AGENTS_NUMBER = 4
 GOALS = 10
 GOALS_PER_CAPITA = 4
@@ -43,18 +43,20 @@ def main():
     environment_manager_agent.web.start(hostname="127.0.0.1", port="8888")
 
     fig, ax = ox.plot_graph(world_map.graph, show=False, close=False)
-    sc = ax.scatter([], [])
-    ax.plot(mobile_agents[0].current_path[:, 0], mobile_agents[0].current_path[:,1])
+    sc = ax.scatter([], [], marker='.', c='r')
+    for agent in mobile_agents:
+        ax.plot(agent.current_path[:, 0], agent.current_path[:, 1])
 
     time.sleep(1)
     while environment_manager_agent.is_alive():
         try:
             x, y = environment_manager_agent.get_agent_points()
-            ax.scatter(x, y, marker='.', c='r')
-            plt.pause(0.1)
+            ax.scatter(x, y, marker='+', c='r')
+            # sc.set_data(x, y)
+            plt.pause(0.01)
             # time.sleep(0.1)
-        # except KeyboardInterrupt:
-        except:
+        except KeyboardInterrupt:
+        # except:
             environment_manager_agent.stop()
             for agent in mobile_agents: agent.stop()
             break

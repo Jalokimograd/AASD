@@ -6,7 +6,7 @@ from spade.message import Message
 
 from Templates import ACTUALIZE_INFORMATION, BROADCAST
 
-range = 0.0001
+range = 45.001
 
 class EnvironmentManagerAgent(agent.Agent):
     agent_name = "EnvironmentManagerAgent"

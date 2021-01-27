@@ -81,9 +81,9 @@ class MobileAgent(agent.Agent):
 
 
     # wywalić po ogarnięciu globalnego zegara
-    class ClockBehaviour(PeriodicBehaviour):
+    class ClockUpdate(PeriodicBehaviour):
         async def run(self):
-            self.agent.clock += self.period.microseconds * 1e-6
+            self.agent.clock += (self.period.microseconds * 1e-6)
 
     class PlanPathBehaviour(OneShotBehaviour):
         permutation = []
@@ -92,10 +92,9 @@ class MobileAgent(agent.Agent):
             print(f'Planning started... {self.permutation}')
 
             schedule = self.agent.planer.schedule(self.permutation, AGENT_SPEED)
-            self.agent.schedule = schedule
+            self.agent.schedule = {str(appointment[0]): (float(appointment[1]), float(appointment[2])) for appointment in schedule}
             path = self.agent.planer.generate_full_path(self.agent.localization, schedule, AGENT_SPEED)
             # path = self.agent.planer.get_path(self.agent.localization, self.permutation[0], AGENT_SPEED)
-            print(path)
             print('Path created!')
             await self.agent.set_path(path)
 
@@ -121,9 +120,9 @@ class MobileAgent(agent.Agent):
 
         self.add_behaviour(self.ActualizationInfoInEnvironment(period=1))
         self.add_behaviour(self.BroadcastSend(period=10, start_at = start_at + timedelta(seconds=5)))
-        self.add_behaviour(self.BroadcastReceive(), template = BROADCAST)
+        self.add_behaviour(self.BroadcastReceive(), template=BROADCAST)
         self.add_behaviour(self.ExecuteSchedule(period=0.25))
-        self.add_behaviour(self.ClockBehaviour(period=0.1))
+        self.add_behaviour(self.ClockUpdate(period=0.05))
 
         self.add_behaviour(self.PlanPathBehaviour())
 
