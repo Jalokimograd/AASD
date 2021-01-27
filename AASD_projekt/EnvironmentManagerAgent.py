@@ -6,7 +6,7 @@ from spade.message import Message
 
 from Templates import ACTUALIZE_INFORMATION, BROADCAST
 
-range = 50
+range = 0.0001
 
 class EnvironmentManagerAgent(agent.Agent):
     agent_name = "EnvironmentManagerAgent"
@@ -65,7 +65,7 @@ class EnvironmentManagerAgent(agent.Agent):
         for agent in self.agents_list.values():
             x.append(agent['localization']['x'])
             y.append(agent['localization']['y'])
-        return x,y
+        return x, y
                      
     async def setup(self):
         print("Environment Manager created")

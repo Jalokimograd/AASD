@@ -4,10 +4,11 @@ from json import dumps, loads
 from datetime import datetime, timedelta
 
 from spade import agent
-from spade.behaviour import PeriodicBehaviour, CyclicBehaviour
+from spade.behaviour import PeriodicBehaviour, CyclicBehaviour, OneShotBehaviour
 from spade.message import Message
 
-from Map import Map, Planner
+from Map import Map
+from Planner import Planner
 from Templates import BROADCAST
 import numpy as np
 
@@ -15,13 +16,6 @@ AGENT_SPEED = 30
 
 class MobileAgent(agent.Agent):
     agent_name: str
-    localization = {}       # lokalizacja {"x": .., "y": ..}
-    neighbors = {}          # sąsiedzi {"name": {"path": .., "time": .., "localization": ..}, ...}
-    current_path = None     # ścieżka [[x, y, time], ... ]
-    goals = {}              # cele {node_id: needed_time}
-    schedule = {}           # harmonogram {node_id: [start_time, end_time]}
-    clock = 0               # time of day
-
 
     # Informacja o położeniu do EnvironmentManager'a
     class ActualizationInfoInEnvironment(PeriodicBehaviour):
@@ -32,7 +26,7 @@ class MobileAgent(agent.Agent):
                 body = dumps({"source_name": self.agent.agent_name,
                               "localization": self.agent.localization})
             )
-            print(f"[{self.agent.agent_name}] Send informations actualization to Environment manager")
+            # print(f"[{self.agent.agent_name}] Send informations actualization to Environment manager")
             await self.send(msg)
 
     # Informacja Broadcast jest wysyłana do EnvironmentManager'a, który wyśle ją do wszystkich urządzeń w pobliżu
@@ -45,7 +39,7 @@ class MobileAgent(agent.Agent):
                               "localization": self.agent.localization,
                               "schedule": self.agent.schedule})
             )
-            print(f"[{self.agent.agent_name}] Send Broadcast")
+            # print(f"[{self.agent.agent_name}] Send Broadcast")
             await self.send(msg)
 
 
@@ -74,10 +68,14 @@ class MobileAgent(agent.Agent):
                 clock = self.agent.clock
                 index = np.argmax(path[:, -1] > clock) - 1
                 point = path[index:(index+2), :]
+
                 stamp = point[:, -1]
                 point = point[:, :-1]
-                alpha = (clock - stamp[0]) / (stamp[-1] - stamp[0])
-                location = point[0] * (1-alpha) + point[1] * alpha
+                time_dist = (stamp[-1] - stamp[0])
+                if time_dist <= 0.0:
+                    return
+                alpha = (clock - stamp[0]) / time_dist
+                location = point[0] * (1-alpha) + point[-1] * alpha
                 await self.agent.move_to(location[0], location[1])
 
 
@@ -85,6 +83,15 @@ class MobileAgent(agent.Agent):
     class ClockBehaviour(PeriodicBehaviour):
         async def run(self):
             self.agent.clock += self.period.microseconds * 1e-6
+
+    class PlanPathBehaviour(OneShotBehaviour):
+        permutation = []
+        async def run(self):
+            self.permutation, distance = self.agent.planer.optimal_permutation()
+            print(f'Planning started... {self.permutation}')
+            path = self.agent.planer.get_path(self.agent.localization, self.permutation[1], AGENT_SPEED)
+            print('Path created!')
+            await self.agent.set_path(path)
 
     async def move_to(self, x, y):
         self.localization['x'] = x
@@ -94,8 +101,10 @@ class MobileAgent(agent.Agent):
         self.localization['x'] += x
         self.localization['y'] += y
 
-    async def plan(self):
-        self.current_path = self.planer.get_full_path(AGENT_SPEED)
+    async def set_path(self, path):
+        self.current_path = path
+
+
 
     async def numpy_localization(self):
         return np.array((self.localization['x'], self.localization['y']))
@@ -110,14 +119,19 @@ class MobileAgent(agent.Agent):
         self.add_behaviour(self.ExecuteSchedule(period=0.25))
         self.add_behaviour(self.ClockBehaviour(period=0.1))
 
-        await self.plan()
+        self.add_behaviour(self.PlanPathBehaviour())
 
     def __init__(self, name, password, world_map: Map = None):
         super().__init__(name, password)
         self.agent_name = name
         self.world_map = world_map
         self.planer = Planner(world_map)
-        self.localization = {"x":  random.randrange(100), "y":  random.randrange(100)}
+        self.localization = {"x":  random.randrange(100), "y":  random.randrange(100)} # lokalizacja {"x": .., "y": ..}
+        self.current_path = None  # ścieżka [[x, y, time], ... ]
+        self.schedule = {}  # harmonogram {node_id: [start_time, end_time]}
+        self.neighbors = {}  # sąsiedzi {"name": {"path": .., "time": .., "localization": ..}, ...}
+        self.goals = {}  # cele {node_id: needed_time}
+        self.clock = 0  # time of day
         print(f"[{self.agent_name}] Agent created (init)")
 
     def set_starting_localization(self, localization):
