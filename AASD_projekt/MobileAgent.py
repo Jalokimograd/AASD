@@ -12,7 +12,7 @@ from Planner import Planner
 from Templates import BROADCAST
 import numpy as np
 
-AGENT_SPEED = 30
+AGENT_SPEED = 80
 
 class MobileAgent(agent.Agent):
     agent_name: str
@@ -68,7 +68,8 @@ class MobileAgent(agent.Agent):
                 clock = self.agent.clock
                 index = np.argmax(path[:, -1] > clock) - 1
                 point = path[index:(index+2), :]
-
+                if point.shape[0] == 0:
+                    return
                 stamp = point[:, -1]
                 point = point[:, :-1]
                 time_dist = (stamp[-1] - stamp[0])
@@ -89,7 +90,12 @@ class MobileAgent(agent.Agent):
         async def run(self):
             self.permutation, distance = self.agent.planer.optimal_permutation()
             print(f'Planning started... {self.permutation}')
-            path = self.agent.planer.get_path(self.agent.localization, self.permutation[1], AGENT_SPEED)
+
+            schedule = self.agent.planer.schedule(self.permutation, AGENT_SPEED)
+            self.agent.schedule = schedule
+            path = self.agent.planer.generate_full_path(self.agent.localization, schedule, AGENT_SPEED)
+            # path = self.agent.planer.get_path(self.agent.localization, self.permutation[0], AGENT_SPEED)
+            print(path)
             print('Path created!')
             await self.agent.set_path(path)
 
@@ -138,6 +144,8 @@ class MobileAgent(agent.Agent):
         self.localization = localization
 
     def set_goals(self, goals):
-        self.goals = [self.world_map.locate_nearset_node(self.localization)] + goals
+        current_node = self.world_map.locate_nearset_node(self.localization)
+        new_goals = {current_node: 0, **goals}
+        self.goals = new_goals
         self.planer.set_goals(self.goals)
 

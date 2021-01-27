@@ -22,7 +22,7 @@ class Map:
         return locations
 
     def locate_nearset_node(self, location):
-        node = ox.get_nearest_node(self.graph, (location['x'], location['y']), method='euclidean')
+        node = ox.get_nearest_node(self.graph, (location['y'], location['x']), method='euclidean')
         return node
 
     def path_to_locations(self, node_path):
